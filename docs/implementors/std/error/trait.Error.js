@@ -14,6 +14,7 @@ implementors["mime"] = [{"text":"impl Error for FromStrError","synthetic":false,
 implementors["native_tls"] = [{"text":"impl Error for Error","synthetic":false,"types":[]},{"text":"impl&lt;S&gt; Error for HandshakeError&lt;S&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;S: Any + Debug,&nbsp;</span>","synthetic":false,"types":[]}];
 implementors["openssl"] = [{"text":"impl Error for ErrorStack","synthetic":false,"types":[]},{"text":"impl Error for Error","synthetic":false,"types":[]},{"text":"impl Error for Error","synthetic":false,"types":[]},{"text":"impl&lt;S:&nbsp;Debug&gt; Error for HandshakeError&lt;S&gt;","synthetic":false,"types":[]},{"text":"impl Error for X509VerifyResult","synthetic":false,"types":[]}];
 implementors["proc_macro2"] = [{"text":"impl Error for LexError","synthetic":false,"types":[]}];
+implementors["rapr"] = [{"text":"impl Error for Error","synthetic":false,"types":[]}];
 implementors["reqwest"] = [{"text":"impl Error for Error","synthetic":false,"types":[]}];
 implementors["serde"] = [{"text":"impl Error for Error","synthetic":false,"types":[]}];
 implementors["serde_urlencoded"] = [{"text":"impl Error for Error","synthetic":false,"types":[]}];
