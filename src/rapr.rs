@@ -1,20 +1,38 @@
 extern crate json;
 extern crate reqwest;
 extern crate tokio;
-use chrono::{DateTime, Local};
+// use chrono::{DateTime, Local};
 use std::fmt;
 
-#[derive(Debug)]
+/// Error enum
+#[derive(Debug, Error)]
 pub enum Error {
-    JsonParseError,
-    HttpGetError,
+    UnexpectedJson,
+    NoneError,
+    JsonParseError(json::Error),
+    RequestError(reqwest::Error),
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum TextType {
-    HTML,
-    Raw,
-    Empty,
+/// Items related to the post
+#[derive(Debug, Clone)]
+pub struct RaPostItems {
+    pub upvotes: u32,
+    pub downvotes: u32,
+    pub permalink: String,
+    pub url: Option<String>,
+}
+
+impl RaPostItems {
+    /// Create a new struct of items for a post  
+    /// You probably don't need this fucntion.
+    pub fn new(upvotes: u32, downvotes: u32, permalink: &str, url: Option<String>) -> Self {
+        Self {
+            upvotes,
+            downvotes,
+            permalink: permalink.to_string(),
+            url,
+        }
+    }
 }
 
 /// Reddit post object
@@ -23,13 +41,9 @@ pub enum TextType {
 #[derive(Clone)]
 pub struct RaPost {
     pub id: String,
-    pub datetime: DateTime<Local>,
     pub title: String,
     pub text: Option<String>,
-    texttype: TextType,
-    pub permalink: String,
-    pub upvotes: u32,
-    pub downvotes: u32,
+    pub items: RaPostItems,
     pub json: json::JsonValue,
 }
 
@@ -37,12 +51,10 @@ impl fmt::Debug for RaPost {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RaPost")
             .field("id", &self.id)
-            .field("datetime", &self.datetime)
             .field("title", &self.title)
             .field("text", &self.text)
-            .field("texttype", &self.texttype)
-            .field("upvotes", &self.upvotes)
-            .field("downvotes", &self.downvotes)
+            .field("permalink", &self.items.permalink)
+            .field("url", &self.items.url)
             .finish()
     }
 }
@@ -53,54 +65,35 @@ impl RaPost {
         id: &str,
         title: &str,
         text: Option<&str>,
-        texttype: TextType,
-        permalink: &str,
-        upvotes: u32,
-        downvotes: u32,
+        items: RaPostItems,
         json: &json::JsonValue,
     ) -> Self {
-        let _text = match text {
-            Some(text) => Some(text.to_string()),
-            None => None,
-        };
         Self {
             id: id.to_string(),
             title: title.to_string(),
-            datetime: Local::now(), // Temp
-            text: _text,
-            texttype,
-            permalink: String::from(permalink),
-            upvotes,
-            downvotes,
+            text: text.map(String::from),
+            items,
             json: json.clone(),
         }
     }
+
     /// Parse json from `json['data']['children']` array elements.
-    pub fn parse(post: &json::JsonValue) -> Result<RaPost, json::Error> {
-        let mut text: Option<&str> = post["selftext"].as_str();
-        let mut texttype: TextType = TextType::Empty;
-        // Reddit always returns an empty string on selftext
-        // if there is no text. So this shouldn't panic!
-        // Some also have both selftext and selftext_html
-        // I am only taking selftext from these.
-        if text.unwrap().is_empty() {
-            text = post["selftext_html"].as_str();
-            if text != None {
-                texttype = TextType::HTML;
-            }
-        } else {
-            texttype = TextType::Raw;
+    pub fn parse(post: &json::JsonValue) -> Result<RaPost, Error> {
+        let id = post["name"].as_str().ok_or(Error::UnexpectedJson)?;
+        let title = post["title"].as_str().ok_or(Error::UnexpectedJson)?;
+        let upvotes = post["ups"].as_u32().ok_or(Error::UnexpectedJson)?;
+        let downvotes = post["downs"].as_u32().ok_or(Error::UnexpectedJson)?;
+        let permalink = post["permalink"].as_str().ok_or(Error::UnexpectedJson)?;
+        let url = post["url"].as_str().map(String::from);
+
+        let mut selftext = post["selftext"].as_str();
+        if selftext.ok_or(Error::NoneError)?.is_empty() {
+            // Either unwraps and sets new value or reamins ""
+            selftext = post["selftext_html"].as_str();
         }
-        Ok(RaPost::new(
-            post["name"].as_str().unwrap(),
-            post["title"].as_str().unwrap(),
-            text,
-            texttype,
-            post["permalink"].as_str().unwrap(),
-            post["ups"].as_u32().unwrap(),
-            post["downs"].as_u32().unwrap(),
-            post,
-        ))
+        let items = RaPostItems::new(upvotes, downvotes, permalink, url);
+
+        Ok(RaPost::new(id, title, selftext, items, post))
     }
 }
 
@@ -134,12 +127,21 @@ pub struct RaprClient {
     rwclient: reqwest::Client,
 }
 
+impl Default for RaprClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RaprClient {
     pub fn new() -> Self {
         Self {
             oauth: None,
             rwclient: reqwest::Client::new(),
         }
+    }
+    pub fn default() -> Self {
+        Self::new()
     }
 
     /// Fetch posts from subreddit and store them in the subreddit object.
@@ -151,34 +153,34 @@ impl RaprClient {
         };
 
         let res = match &sub.after {
-            None => self
-                .rwclient
-                .get(url)
-                .query(&[("limit", count)])
-                .send()
-                .await
-                .unwrap(),
-            Some(after) => self
-                .rwclient
-                .get(url)
-                .query(&[("limit", count.to_string()), ("after", after.to_string())])
-                .send()
-                .await
-                .unwrap(),
+            None => {
+                self.rwclient
+                    .get(url)
+                    .query(&[("limit", count)])
+                    .send()
+                    .await?
+            }
+            Some(after) => {
+                self.rwclient
+                    .get(url)
+                    .query(&[("limit", count.to_string()), ("after", after.to_string())])
+                    .send()
+                    .await?
+            }
         };
 
-        let mut parsed = json::parse(res.text().await.unwrap().as_str()).unwrap();
+        let mut parsed = json::parse(res.text().await?.as_str())?;
 
         let raw_posts: Vec<json::JsonValue> = match parsed["data"]["children"].take() {
             json::JsonValue::Array(arr) => arr,
-            _ => return Err(Error::JsonParseError),
+            _ => return Err(Error::UnexpectedJson),
         };
 
         let mut parsed_posts: Vec<RaPost> = Vec::new();
 
         for post in raw_posts {
-            if post["kind"].as_str().unwrap() == "t3" {
-                parsed_posts.push(RaPost::parse(&post["data"]).unwrap());
+            if post["kind"].as_str().ok_or(Error::NoneError)? == "t3" {
+                parsed_posts.push(RaPost::parse(&post["data"])?);
             }
         }
         if parsed["data"]["after"].is_string() {
