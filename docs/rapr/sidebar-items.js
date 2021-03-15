@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["RaprClient",""]]});
+initSidebarItems({"struct":[["RaPost","Reddit post object (more like repost object). Keeps track of post information."],["RaSub","RaSubSubreddit object Keeps track of posts"],["RaprClient","Reddit api client. Uses a reqwest::Client internally. Currently no authentication"]]});
