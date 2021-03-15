@@ -10,14 +10,27 @@ pub enum Error {
     HttpGetError,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum TextType {
+    HTML,
+    Raw,
+    Empty,
+}
+
+/// Reddit post object
+/// (more like repost object).  
+/// Keeps track of post information.
 #[derive(Clone)]
 pub struct RaPost {
-    id: String,
-    datetime: DateTime<Local>,
-    title: String,
-    text: Option<String>,
-    json: json::JsonValue,
-    pinned: bool,
+    pub id: String,
+    pub datetime: DateTime<Local>,
+    pub title: String,
+    pub text: Option<String>,
+    texttype: TextType,
+    pub permalink: String,
+    pub upvotes: u32,
+    pub downvotes: u32,
+    pub json: json::JsonValue,
 }
 
 impl fmt::Debug for RaPost {
@@ -27,31 +40,73 @@ impl fmt::Debug for RaPost {
             .field("datetime", &self.datetime)
             .field("title", &self.title)
             .field("text", &self.text)
+            .field("texttype", &self.texttype)
+            .field("upvotes", &self.upvotes)
+            .field("downvotes", &self.downvotes)
             .finish()
     }
 }
 
 impl RaPost {
-    pub fn new(id: &str, title: &str, json: &json::JsonValue, pinned: bool) -> Self {
+    /// Generate new post object (you probably don't need this).
+    pub fn new(
+        id: &str,
+        title: &str,
+        text: Option<&str>,
+        texttype: TextType,
+        permalink: &str,
+        upvotes: u32,
+        downvotes: u32,
+        json: &json::JsonValue,
+    ) -> Self {
+        let _text = match text {
+            Some(text) => Some(text.to_string()),
+            None => None,
+        };
         Self {
             id: id.to_string(),
             title: title.to_string(),
             datetime: Local::now(), // Temp
-            text: Some(String::from("")),
+            text: _text,
+            texttype,
+            permalink: String::from(permalink),
+            upvotes,
+            downvotes,
             json: json.clone(),
-            pinned,
         }
     }
+    /// Parse json from `json['data']['children']` array elements.
     pub fn parse(post: &json::JsonValue) -> Result<RaPost, json::Error> {
+        let mut text: Option<&str> = post["selftext"].as_str();
+        let mut texttype: TextType = TextType::Empty;
+        // Reddit always returns an empty string on selftext
+        // if there is no text. So this shouldn't panic!
+        // Some also have both selftext and selftext_html
+        // I am only taking selftext from these.
+        if text.unwrap().is_empty() {
+            text = post["selftext_html"].as_str();
+            if text != None {
+                texttype = TextType::HTML;
+            }
+        } else {
+            texttype = TextType::Raw;
+        }
         Ok(RaPost::new(
-            json::stringify(post["name"].clone()).as_str(),
-            json::stringify(post["title"].clone()).as_str(),
+            post["name"].as_str().unwrap(),
+            post["title"].as_str().unwrap(),
+            text,
+            texttype,
+            post["permalink"].as_str().unwrap(),
+            post["ups"].as_u32().unwrap(),
+            post["downs"].as_u32().unwrap(),
             post,
-            post["pinned"].as_bool().unwrap(),
         ))
     }
 }
 
+///# RaSub
+///Subreddit object   
+///Keeps track of posts
 #[derive(Debug)]
 pub struct RaSub {
     pub name: String,
@@ -60,21 +115,19 @@ pub struct RaSub {
 }
 
 impl RaSub {
-    pub fn pinned_posts(&self) -> Option<Vec<RaPost>> {
-        let mut pinned_posts: Vec<RaPost> = Vec::new();
-        for post in &self.posts {
-            if post.pinned {
-                pinned_posts.push(post.clone());
-            }
-        }
-        if pinned_posts.is_empty() {
-            return None;
-        } else {
-            return Some(pinned_posts);
+    /// Generate subreddit object
+    pub fn new(name: &str) -> RaSub {
+        RaSub {
+            name: String::from(name),
+            posts: Vec::new(),
+            after: None,
         }
     }
 }
 
+/// Reddit api client.  
+/// Uses a [reqwest::Client](https://docs.rs/reqwest/0.11.2/reqwest/struct.Client.html) internally.  
+/// Currently no authentication
 #[derive(Debug)]
 pub struct RaprClient {
     oauth: Option<String>,
@@ -88,13 +141,9 @@ impl RaprClient {
             rwclient: reqwest::Client::new(),
         }
     }
-    pub fn subreddit(name: &str) -> RaSub {
-        RaSub {
-            name: String::from(name),
-            posts: Vec::new(),
-            after: None,
-        }
-    }
+
+    /// Fetch posts from subreddit and store them in the subreddit object.
+    /// Note: First fetch always seems to pull two pinned posts which are not marked pinned in the json
     pub async fn fetch(&self, count: u32, sub: &mut RaSub) -> Result<Vec<RaPost>, Error> {
         let url = match self.oauth {
             None => format!("https://reddit.com/r/{}.json", sub.name),
@@ -128,7 +177,9 @@ impl RaprClient {
         let mut parsed_posts: Vec<RaPost> = Vec::new();
 
         for post in raw_posts {
-            parsed_posts.push(RaPost::parse(&post["data"]).unwrap());
+            if post["kind"].as_str().unwrap() == "t3" {
+                parsed_posts.push(RaPost::parse(&post["data"]).unwrap());
+            }
         }
         if parsed["data"]["after"].is_string() {
             sub.after = Some(parsed["data"]["after"].to_string());
