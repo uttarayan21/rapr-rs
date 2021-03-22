@@ -8,7 +8,7 @@
 //!use crate::rapr::{RaprClient,RaSub};
 //!#[tokio::main]
 //!async fn main() -> Result<(), rapr::Error> {
-//!     let client = RaprClient::new();
+//!     let client = RaprClient::default();
 //!     let mut sub = RaSub::new("pics");
 //!     client.fetch(10, &mut sub).await?;
 //!     for post in sub.posts {
@@ -27,7 +27,7 @@ mod tests {
     use crate::rapr::{RaSub, RaprClient};
     #[tokio::test]
     async fn subreddit() -> Result<(), crate::rapr::Error> {
-        let client = RaprClient::new();
+        let client = RaprClient::default();
         let mut sub = RaSub::new("rust");
         client.fetch(10, &mut sub).await?;
         for post in sub.posts {
@@ -37,7 +37,7 @@ mod tests {
     }
     #[tokio::test]
     async fn title() {
-        let client = RaprClient::new();
+        let client = RaprClient::default();
         let mut sub = RaSub::new("rust");
         client.fetch(10, &mut sub).await.unwrap();
         for post in sub.posts {

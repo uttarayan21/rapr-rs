@@ -1,7 +1,6 @@
 extern crate json;
 extern crate reqwest;
 extern crate tokio;
-// use chrono::{DateTime, Local};
 use std::fmt;
 
 /// Error enum
@@ -78,6 +77,7 @@ impl RaPost {
     }
 
     /// Parse json from `json['data']['children']` array elements.
+    /// Note: In case of url mission reddit make url the permalink
     pub fn parse(post: &json::JsonValue) -> Result<RaPost, Error> {
         let id = post["name"].as_str().ok_or(Error::UnexpectedJson)?;
         let title = post["title"].as_str().ok_or(Error::UnexpectedJson)?;
@@ -88,7 +88,6 @@ impl RaPost {
 
         let mut selftext = post["selftext"].as_str();
         if selftext.ok_or(Error::NoneError)?.is_empty() {
-            // Either unwraps and sets new value or reamins ""
             selftext = post["selftext_html"].as_str();
         }
         let items = RaPostItems::new(upvotes, downvotes, permalink, url);
@@ -128,23 +127,33 @@ pub struct RaprClient {
 }
 
 impl Default for RaprClient {
+    /// Return the default RaprClient
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl RaprClient {
+    /// Make a RaprClient
     pub fn new() -> Self {
         Self {
             oauth: None,
             rwclient: reqwest::Client::new(),
         }
     }
+    /// Make a RaprClient with a custom user_agent (since reddit ratelimits same user agent being
+    /// used a ton of times)
+    pub fn with_user_agent(user_agent: &str) -> Result<Self, Error> {
+        Ok(Self {
+            oauth: None,
+            rwclient: reqwest::Client::builder().user_agent(user_agent).build()?,
+        })
+    }
     pub fn default() -> Self {
         Self::new()
     }
 
-    /// Fetch posts from subreddit and store them in the subreddit object.
+    /// Fetch posts from subreddit and store them in the subreddit object.  
     /// Note: First fetch always seems to pull two pinned posts which are not marked pinned in the json
     pub async fn fetch(&self, count: u32, sub: &mut RaSub) -> Result<Vec<RaPost>, Error> {
         let url = match self.oauth {
@@ -156,14 +165,18 @@ impl RaprClient {
             None => {
                 self.rwclient
                     .get(url)
-                    .query(&[("limit", count)])
+                    .query(&[("limit", count), ("raw_json", 1)])
                     .send()
                     .await?
             }
             Some(after) => {
                 self.rwclient
                     .get(url)
-                    .query(&[("limit", count.to_string()), ("after", after.to_string())])
+                    .query(&[
+                        ("limit", count.to_string().as_str()),
+                        ("after", after.as_str()),
+                        ("raw_json", "1"),
+                    ])
                     .send()
                     .await?
             }
@@ -180,6 +193,7 @@ impl RaprClient {
 
         for post in raw_posts {
             if post["kind"].as_str().ok_or(Error::NoneError)? == "t3" {
+                // 't3' is the 'post' type in reddit api
                 parsed_posts.push(RaPost::parse(&post["data"])?);
             }
         }
