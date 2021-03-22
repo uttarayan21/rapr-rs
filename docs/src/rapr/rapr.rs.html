@@ -193,11 +193,24 @@
 <span id="190">190</span>
 <span id="191">191</span>
 <span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">json</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">reqwest</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">tokio</span>;
-<span class="comment">// use chrono::{DateTime, Local};</span>
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
 
 <span class="doccomment">/// Error enum</span>
@@ -274,6 +287,7 @@
     }
 
     <span class="doccomment">/// Parse json from `json[&#39;data&#39;][&#39;children&#39;]` array elements.</span>
+    <span class="doccomment">/// Note: In case of url mission reddit make url the permalink</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">post</span>: <span class="kw-2">&amp;</span><span class="ident">json</span>::<span class="ident">JsonValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RaPost</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">post</span>[<span class="string">&quot;name&quot;</span>].<span class="ident">as_str</span>().<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedJson</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">title</span> <span class="op">=</span> <span class="ident">post</span>[<span class="string">&quot;title&quot;</span>].<span class="ident">as_str</span>().<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedJson</span>)<span class="question-mark">?</span>;
@@ -284,7 +298,6 @@
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">selftext</span> <span class="op">=</span> <span class="ident">post</span>[<span class="string">&quot;selftext&quot;</span>].<span class="ident">as_str</span>();
         <span class="kw">if</span> <span class="ident">selftext</span>.<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">NoneError</span>)<span class="question-mark">?</span>.<span class="ident">is_empty</span>() {
-            <span class="comment">// Either unwraps and sets new value or reamins &quot;&quot;</span>
             <span class="ident">selftext</span> <span class="op">=</span> <span class="ident">post</span>[<span class="string">&quot;selftext_html&quot;</span>].<span class="ident">as_str</span>();
         }
         <span class="kw">let</span> <span class="ident">items</span> <span class="op">=</span> <span class="ident">RaPostItems</span>::<span class="ident">new</span>(<span class="ident">upvotes</span>, <span class="ident">downvotes</span>, <span class="ident">permalink</span>, <span class="ident">url</span>);
@@ -324,23 +337,33 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">RaprClient</span> {
+    <span class="doccomment">/// Return the default RaprClient</span>
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span>::<span class="ident">new</span>()
     }
 }
 
 <span class="kw">impl</span> <span class="ident">RaprClient</span> {
+    <span class="doccomment">/// Make a RaprClient</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">oauth</span>: <span class="prelude-val">None</span>,
             <span class="ident">rwclient</span>: <span class="ident">reqwest</span>::<span class="ident">Client</span>::<span class="ident">new</span>(),
         }
     }
+    <span class="doccomment">/// Make a RaprClient with a custom user_agent (since reddit ratelimits same user agent being</span>
+    <span class="doccomment">/// used a ton of times)</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_user_agent</span>(<span class="ident">user_agent</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="ident">oauth</span>: <span class="prelude-val">None</span>,
+            <span class="ident">rwclient</span>: <span class="ident">reqwest</span>::<span class="ident">Client</span>::<span class="ident">builder</span>().<span class="ident">user_agent</span>(<span class="ident">user_agent</span>).<span class="ident">build</span>()<span class="question-mark">?</span>,
+        })
+    }
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span>::<span class="ident">new</span>()
     }
 
-    <span class="doccomment">/// Fetch posts from subreddit and store them in the subreddit object.</span>
+    <span class="doccomment">/// Fetch posts from subreddit and store them in the subreddit object.  </span>
     <span class="doccomment">/// Note: First fetch always seems to pull two pinned posts which are not marked pinned in the json</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">fetch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">count</span>: <span class="ident">u32</span>, <span class="ident">sub</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">RaSub</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RaPost</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">url</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">oauth</span> {
@@ -352,14 +375,18 @@
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">rwclient</span>
                     .<span class="ident">get</span>(<span class="ident">url</span>)
-                    .<span class="ident">query</span>(<span class="kw-2">&amp;</span>[(<span class="string">&quot;limit&quot;</span>, <span class="ident">count</span>)])
+                    .<span class="ident">query</span>(<span class="kw-2">&amp;</span>[(<span class="string">&quot;limit&quot;</span>, <span class="ident">count</span>), (<span class="string">&quot;raw_json&quot;</span>, <span class="number">1</span>)])
                     .<span class="ident">send</span>()
                     .<span class="kw">await</span><span class="question-mark">?</span>
             }
             <span class="prelude-val">Some</span>(<span class="ident">after</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">rwclient</span>
                     .<span class="ident">get</span>(<span class="ident">url</span>)
-                    .<span class="ident">query</span>(<span class="kw-2">&amp;</span>[(<span class="string">&quot;limit&quot;</span>, <span class="ident">count</span>.<span class="ident">to_string</span>()), (<span class="string">&quot;after&quot;</span>, <span class="ident">after</span>.<span class="ident">to_string</span>())])
+                    .<span class="ident">query</span>(<span class="kw-2">&amp;</span>[
+                        (<span class="string">&quot;limit&quot;</span>, <span class="ident">count</span>.<span class="ident">to_string</span>().<span class="ident">as_str</span>()),
+                        (<span class="string">&quot;after&quot;</span>, <span class="ident">after</span>.<span class="ident">as_str</span>()),
+                        (<span class="string">&quot;raw_json&quot;</span>, <span class="string">&quot;1&quot;</span>),
+                    ])
                     .<span class="ident">send</span>()
                     .<span class="kw">await</span><span class="question-mark">?</span>
             }
@@ -376,6 +403,7 @@
 
         <span class="kw">for</span> <span class="ident">post</span> <span class="kw">in</span> <span class="ident">raw_posts</span> {
             <span class="kw">if</span> <span class="ident">post</span>[<span class="string">&quot;kind&quot;</span>].<span class="ident">as_str</span>().<span class="ident">ok_or</span>(<span class="ident">Error</span>::<span class="ident">NoneError</span>)<span class="question-mark">?</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;t3&quot;</span> {
+                <span class="comment">// &#39;t3&#39; is the &#39;post&#39; type in reddit api</span>
                 <span class="ident">parsed_posts</span>.<span class="ident">push</span>(<span class="ident">RaPost</span>::<span class="ident">parse</span>(<span class="kw-2">&amp;</span><span class="ident">post</span>[<span class="string">&quot;data&quot;</span>])<span class="question-mark">?</span>);
             }
         }

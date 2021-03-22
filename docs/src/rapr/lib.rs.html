@@ -59,7 +59,7 @@
 <span class="doccomment">//!use crate::rapr::{RaprClient,RaSub};</span>
 <span class="doccomment">//!#[tokio::main]</span>
 <span class="doccomment">//!async fn main() -&gt; Result&lt;(), rapr::Error&gt; {</span>
-<span class="doccomment">//!     let client = RaprClient::new();</span>
+<span class="doccomment">//!     let client = RaprClient::default();</span>
 <span class="doccomment">//!     let mut sub = RaSub::new(&quot;pics&quot;);</span>
 <span class="doccomment">//!     client.fetch(10, &amp;mut sub).await?;</span>
 <span class="doccomment">//!     for post in sub.posts {</span>
@@ -78,7 +78,7 @@
     <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">rapr</span>::{<span class="ident">RaSub</span>, <span class="ident">RaprClient</span>};
     <span class="attribute">#[<span class="ident">tokio</span>::<span class="ident">test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">subreddit</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw">crate</span>::<span class="ident">rapr</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">RaprClient</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">RaprClient</span>::<span class="ident">default</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sub</span> <span class="op">=</span> <span class="ident">RaSub</span>::<span class="ident">new</span>(<span class="string">&quot;rust&quot;</span>);
         <span class="ident">client</span>.<span class="ident">fetch</span>(<span class="number">10</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sub</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">for</span> <span class="ident">post</span> <span class="kw">in</span> <span class="ident">sub</span>.<span class="ident">posts</span> {
@@ -88,7 +88,7 @@
     }
     <span class="attribute">#[<span class="ident">tokio</span>::<span class="ident">test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">title</span>() {
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">RaprClient</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">RaprClient</span>::<span class="ident">default</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sub</span> <span class="op">=</span> <span class="ident">RaSub</span>::<span class="ident">new</span>(<span class="string">&quot;rust&quot;</span>);
         <span class="ident">client</span>.<span class="ident">fetch</span>(<span class="number">10</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sub</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
         <span class="kw">for</span> <span class="ident">post</span> <span class="kw">in</span> <span class="ident">sub</span>.<span class="ident">posts</span> {
