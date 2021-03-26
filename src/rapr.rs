@@ -106,14 +106,19 @@ pub struct RaSub {
     after: Option<String>,
 }
 
-impl RaSub {
-    /// Generate subreddit object
-    pub fn new(name: &str) -> RaSub {
-        RaSub {
+impl From<&str> for RaSub {
+    fn from(name: &str) -> Self {
+        Self {
             name: String::from(name),
             posts: Vec::new(),
             after: None,
         }
+    }
+}
+impl RaSub {
+    /// Generate subreddit object
+    pub fn new(name: &str) -> Self {
+        Self::from(name)
     }
 }
 
