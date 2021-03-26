@@ -115,6 +115,11 @@ impl From<&str> for RaSub {
         }
     }
 }
+impl From<String> for RaSub {
+    fn from(name: String) -> Self {
+        Self::from(name.as_ref())
+    }
+}
 impl RaSub {
     /// Generate subreddit object
     pub fn new(name: &str) -> Self {
