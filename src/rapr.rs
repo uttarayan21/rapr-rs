@@ -99,7 +99,7 @@ impl RaPost {
 ///# RaSub
 ///Subreddit object   
 ///Keeps track of posts
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RaSub {
     pub name: String,
     pub posts: Vec<RaPost>,
