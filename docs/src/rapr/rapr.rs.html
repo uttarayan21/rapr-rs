@@ -319,7 +319,7 @@
 <span class="doccomment">///# RaSub</span>
 <span class="doccomment">///Subreddit object   </span>
 <span class="doccomment">///Keeps track of posts</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RaSub</span> {
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">posts</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RaPost</span><span class="op">&gt;</span>,
