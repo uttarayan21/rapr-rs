@@ -1,6 +1,6 @@
 [package]
 name = "rapr"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Uttarayan Mondal <uttarayan21@gmail.com>"]
 edition = "2018"
 
@@ -10,6 +10,7 @@ edition = "2018"
 
 derive-error = "0.0.5"
 reqwest = "0.11.2"
-json = "0.12.4"
 tokio = { version = "1.4.0", features = ["full"] }
+serde = "1.0.125"
+serde_json = "1.0.64"
 

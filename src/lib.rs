@@ -18,6 +18,10 @@
 //!}
 #[macro_use]
 extern crate derive_error;
+extern crate reqwest;
+extern crate serde;
+extern crate serde_json;
+extern crate tokio;
 mod rapr;
 pub use crate::rapr::Error;
 pub use crate::rapr::{RaPost, RaPostItems, RaSub, RaprClient};

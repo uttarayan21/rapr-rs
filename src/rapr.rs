@@ -1,6 +1,3 @@
-extern crate json;
-extern crate reqwest;
-extern crate tokio;
 use std::fmt;
 
 /// Error enum
@@ -8,15 +5,15 @@ use std::fmt;
 pub enum Error {
     UnexpectedJson,
     NoneError,
-    JsonParseError(json::Error),
+    JsonParseError(serde_json::Error),
     RequestError(reqwest::Error),
 }
 
 /// Items related to the post
 #[derive(Debug, Clone)]
 pub struct RaPostItems {
-    pub upvotes: u32,
-    pub downvotes: u32,
+    pub upvotes: u64,
+    pub downvotes: u64,
     pub permalink: String,
     pub url: Option<String>,
 }
@@ -24,7 +21,7 @@ pub struct RaPostItems {
 impl RaPostItems {
     /// Create a new struct of items for a post  
     /// You probably don't need this fucntion.
-    pub fn new(upvotes: u32, downvotes: u32, permalink: &str, url: Option<String>) -> Self {
+    pub fn new(upvotes: u64, downvotes: u64, permalink: &str, url: Option<String>) -> Self {
         Self {
             upvotes,
             downvotes,
@@ -43,7 +40,7 @@ pub struct RaPost {
     pub title: String,
     pub text: Option<String>,
     pub items: RaPostItems,
-    pub json: json::JsonValue,
+    pub json: serde_json::Value,
 }
 
 impl fmt::Debug for RaPost {
@@ -65,7 +62,7 @@ impl RaPost {
         title: &str,
         text: Option<&str>,
         items: RaPostItems,
-        json: &json::JsonValue,
+        json: &serde_json::Value,
     ) -> Self {
         Self {
             id: id.to_string(),
@@ -78,12 +75,17 @@ impl RaPost {
 
     /// Parse json from `json['data']['children']` array elements.
     /// Note: In case of url mission reddit make url the permalink
-    pub fn parse(post: &json::JsonValue) -> Result<RaPost, Error> {
+    pub fn parse(post: &serde_json::Value) -> Result<RaPost, Error> {
         let id = post["name"].as_str().ok_or(Error::UnexpectedJson)?;
+
         let title = post["title"].as_str().ok_or(Error::UnexpectedJson)?;
-        let upvotes = post["ups"].as_u32().ok_or(Error::UnexpectedJson)?;
-        let downvotes = post["downs"].as_u32().ok_or(Error::UnexpectedJson)?;
+
+        let upvotes = post["ups"].as_u64().ok_or(Error::UnexpectedJson)?;
+
+        let downvotes = post["downs"].as_u64().ok_or(Error::UnexpectedJson)?;
+
         let permalink = post["permalink"].as_str().ok_or(Error::UnexpectedJson)?;
+
         let url = post["url"].as_str().map(String::from);
 
         let mut selftext = post["selftext"].as_str();
@@ -192,10 +194,10 @@ impl RaprClient {
             }
         };
 
-        let mut parsed = json::parse(res.text().await?.as_str())?;
+        let mut parsed: serde_json::Value = serde_json::from_str(res.text().await?.as_str())?;
 
-        let raw_posts: Vec<json::JsonValue> = match parsed["data"]["children"].take() {
-            json::JsonValue::Array(arr) => arr,
+        let raw_posts: Vec<serde_json::Value> = match parsed["data"]["children"].take() {
+            serde_json::Value::Array(arr) => arr,
             _ => return Err(Error::UnexpectedJson),
         };
 
